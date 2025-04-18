@@ -53,14 +53,14 @@ class StockDashboardApp:
 
         show_candlestick = st.sidebar.checkbox("Candlestick Chart", value=True)
         show_summary = st.sidebar.checkbox("Summary", value=True)
-        # show_moving_averages = st.sidebar.checkbox("Moving Averages", value=False)
-        # show_bollinger_bands = st.sidebar.checkbox("Bollinger Bands", value=False)
-        # show_obv = st.sidebar.checkbox("On-Balance Volume", value=False)
-        # show_rsi = st.sidebar.checkbox("Relative Strength Index (RSI)", value=False)
-        # show_macd = st.sidebar.checkbox("Moving Average Convergence Divergence (MACD)", value=False)
-        # show_atr = st.sidebar.checkbox("Average True Range (ATR)", value=False)
-        # show_vwap = st.sidebar.checkbox("Volume Weighted Average Price (VWAP)", value=False)
-        # show_volatility = st.sidebar.checkbox("Historical Volatility", value=False)
+        show_moving_averages = st.sidebar.checkbox("Moving Averages", value=False)
+        show_bollinger_bands = st.sidebar.checkbox("Bollinger Bands", value=False)
+        show_obv = st.sidebar.checkbox("On-Balance Volume", value=False)
+        show_rsi = st.sidebar.checkbox("Relative Strength Index (RSI)", value=False)
+        show_macd = st.sidebar.checkbox("Moving Average Convergence Divergence (MACD)", value=False)
+        show_atr = st.sidebar.checkbox("Average True Range (ATR)", value=False)
+        show_vwap = st.sidebar.checkbox("Volume Weighted Average Price (VWAP)", value=False)
+        show_volatility = st.sidebar.checkbox("Historical Volatility", value=False)
 
 if __name__ == "__main__":
     app = StockDashboardApp()
