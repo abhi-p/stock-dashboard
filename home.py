@@ -10,6 +10,7 @@ import json
 
 from data_handler.stock_data import StockDataHandler
 from visualizer.plots import StockVisualizer
+from fin_metrics.calculator import StockMetricsCalculator
 
 
 class StockDashboardApp:
@@ -18,6 +19,8 @@ class StockDashboardApp:
         #self.api_base_url = "https://cloud.iexapis.com/stable/"
         self.data_handler = StockDataHandler()
         self.visualizer = StockVisualizer()
+        self.calculator = StockMetricsCalculator()
+
     def get_us_tickers(self):
         df1 = pd.read_json("merged_tickers.json")
         df1 = pd.json_normalize(df1['data'])
