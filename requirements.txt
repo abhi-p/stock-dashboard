@@ -7,3 +7,5 @@ seaborn
 datetime
 json
 plotly
+plotly.express
+
