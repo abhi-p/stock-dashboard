@@ -6,3 +6,4 @@ numpy
 seaborn
 datetime
 json
+plotly
