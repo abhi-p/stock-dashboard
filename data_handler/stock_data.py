@@ -5,8 +5,8 @@ import datetime
 from datetime import timedelta, datetime 
 
 # API_KEY = st.secrets["api"]["iex_key"]
-API_KEY_ALPHA = st.secrets["api"]["alpha_vantage_api"]
-API_KEY_POLYGON = st.secrets["api"]["polygon_api"]
+API_KEY_ALPHA = st.secrets["alpha_vantage_api"]
+API_KEY_POLYGON = st.secrets["polygon_api"]
 
 
 class StockDataHandler:
