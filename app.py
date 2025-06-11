@@ -45,7 +45,8 @@ class StockDashboardApp:
         symbol = st.sidebar.multiselect("Select a ticker:", us_tickers["search_string"].tolist(),max_selections = 1,default=["AAPL - Apple Inc.             - XNAS"])
         #st.write(symbol)
         if not symbol:
-            st.error("Please select at least one stock.")    
+            st.error("Please select at least one stock.")
+        print(symbol)    
         symbol = symbol[0].split(" - ")[0]
 
         time_range_options = ["5d","1m", "3m", "6m", "1y", "2y"] #, "5y", "YTD", "max"]
