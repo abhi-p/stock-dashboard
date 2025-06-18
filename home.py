@@ -21,15 +21,7 @@ class StockDashboardApp:
         self.visualizer = StockVisualizer()
         self.calculator = StockMetricsCalculator()
 
-    def get_us_tickers(self):
-        df1 = pd.read_json("merged_tickers.json")
-        df1 = pd.json_normalize(df1['data'])
-        
-        # Create the search_string column
-        df1["search_string"] = (
-        df1["ticker"] + " - " + df1["name"] + "\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0" + " - " + df1["primary_exchange"]
-    )
-        return df1.set_index("ticker")
+
     
     def get_daily_data(self,symbol):
         # 🔹 Your Polygon.io API Key
@@ -69,15 +61,15 @@ class StockDashboardApp:
         st.markdown("<style>.stRadio > div {display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;}</style>", unsafe_allow_html=True)
         st.sidebar.markdown("# Stock Dashboard")
         st.sidebar.markdown("Please select a stock symbol and duration from the options below to view detailed stock data and charts.")
-        us_tickers = self.get_us_tickers()
+        us_tickers = self.data_handler.get_us_tickers()
         popular_symbols = ["AAPL", "GOOGL", "MSFT", "META", "NVDA"]
-        new_symbol = st.sidebar.text_input("Input a new ticker:")
+       # new_symbol = st.sidebar.text_input("Input a new ticker:")
     #     selected_stocks = st.multiselect(
     #     "Choose Ticker", us_tickers["search_string"].tolist()
     # )       
-        if new_symbol:
-            popular_symbols.append(new_symbol.upper())
-            st.sidebar.success(f"Added {new_symbol.upper()} to the list")
+        # if new_symbol:
+        #     popular_symbols.append(new_symbol.upper())
+        #     st.sidebar.success(f"Added {new_symbol.upper()} to the list")
         #symbol = st.sidebar.selectbox("Select a ticker:", popular_symbols, index=2)
         
         symbol = st.sidebar.multiselect("Select a ticker:", us_tickers["search_string"].tolist(),max_selections = 1,default=["AAPL - Apple Inc.             - XNAS"])
@@ -175,6 +167,27 @@ class StockDashboardApp:
                 st.dataframe(stock_data.tail())
 
             st.download_button("Download Stock Data Overview", stock_data.to_csv(index=True), file_name=f"{symbol}_stock_data.csv", mime="text/csv")
+
+        st.subheader("Latest News")
+        news_df = self.data_handler.get_news(symbol)
+
+        positive_news = news_df[news_df["sentiment"] == "positive"].drop_duplicates(subset="Publisher")
+        negative_news = news_df[news_df["sentiment"] == "negative"].drop_duplicates(subset="Publisher")
+        if not news_df.empty:
+            #news_df = self.categorize_sentiment(news_df)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### 🟢 Bullish News")
+                for idx, row in positive_news.head(5).iterrows():
+                    st.markdown(f"- [{row['Title']}]({row['URL']}) ({row['Publisher']})")
+
+            with col2:
+                st.markdown("### 🔴 Bearish News")
+                for idx, row in negative_news.head(5).iterrows():
+                    st.markdown(f"- [{row['Title']}]({row['URL']}) ({row['Publisher']})")
+        else:
+            st.info("No news articles found.")
 
 if __name__ == "__main__":
     app = StockDashboardApp()

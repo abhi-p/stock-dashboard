@@ -6,3 +6,5 @@ numpy
 seaborn
 plotly
 DateTime 
+polygon
+requests

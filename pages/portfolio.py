@@ -1,13 +1,22 @@
 import streamlit as st
 import pandas as pd
+from data_handler.stock_data import StockDataHandler
+
 
 # You can use session state to keep track of portfolio across interactions
 if "portfolio" not in st.session_state:
     st.session_state.portfolio = []
 
+data_handler = StockDataHandler()
+us_tickers = data_handler.get_us_tickers()
 st.title("📊 Portfolio Tracker")
-
-ticker = st.text_input("Enter Stock Ticker")
+ticker = st.multiselect("Select a ticker:", us_tickers["search_string"].tolist(),max_selections = 1,default=["AAPL - Apple Inc.             - XNAS"])
+#st.write(symbol)
+if not ticker:
+    st.error("Please select at least one stock.")
+print(ticker)    
+ticker = ticker[0].split(" - ")[0]
+#ticker = st.text_input("Enter Stock Ticker")
 shares = st.number_input("Number of Shares", min_value=1, step=1)
 buy_price = st.number_input("Buy Price ($)", min_value=0.0, step=0.1)
 
