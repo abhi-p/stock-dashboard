@@ -1,6 +1,7 @@
 import streamlit as st
 
 from data_handler.stock_data import *
+from visualizer.plots import *
 from streamlit_javascript import st_javascript
 from zoneinfo import ZoneInfo
 
@@ -25,6 +26,7 @@ if 'timezone' not in st.session_state:
     st.session_state['timezone'] = ZoneInfo(timezone)
 
 data_handler = StockDataHandler()
+visualizer = StockVisualizer()
 
 page_state = {
     'current_time_price_page': datetime.datetime.now(st.session_state['timezone']).replace(microsecond=0, tzinfo=None),
@@ -225,4 +227,243 @@ with col3:
                     )
                 i += 1
 
+
+# #----SECOND SECTION----
+
+if len(TICKERS) == 0:
+    st.header(f"Security: None")
+    st.error("Error found")
+    st.stop()
+
+if len(TICKERS) == 1:
+
+    TICKER = TICKERS[0]
+
+    info = data_handler.fetch_info(TICKER)
+
+    NAME = info.get('shortName', "")
+
+    st.header(f"Security: {TICKER}")
+    st.write(f'{NAME}')
+
+    # ----INFORMATION----
+    with st.expander("More info"):
+        col1, col2 = st.columns([0.3, 0.7], gap="small")
+        with col1:
+            df = data_handler.parse_data(info)
+            PRICE = df.loc['Price', 0]
+            df.drop(index="Price", inplace=True)
+            df = df.reset_index()
+            df = df.rename(columns={"index": "Feature", 0: "Value"})
+            st.dataframe(
+                data=df,
+                hide_index=True
+            )
+        with col2:
+            BUSINESS_SUMMARY = info.get('longBusinessSummary', "")
+            st.write(BUSINESS_SUMMARY)
+
+    #----METRICS----
+    PREVIOUS_PRICE = info.get('previousClose', 0)
+    CHANGE = PRICE - PREVIOUS_PRICE
+    CHANGE_PER = (CHANGE/PREVIOUS_PRICE)*100
+    HIGH = info.get('dayHigh', 0)
+    LOW = info.get('dayLow', 0)
+    CURRENCY = info.get('currency', "???")
+    VOLUME = info.get('volume', 0)
+    FIFTY_TWO_WEEK_LOW = info.get('fiftyTwoWeekLow', 0)
+    FIFTY_TWO_WEEK_HIGH = info.get('fiftyTwoWeekHigh', 0)
+
+    if CHANGE_PER == 0:
+        st.metric(
+            "Latest Price",
+            value=f'{PRICE:.1f} {CURRENCY}'
+            )
+    else:
+        st.metric(
+            "Latest Price",
+            value=f'{PRICE:.1f} {CURRENCY}',
+            delta=f'{CHANGE:.1f} ({CHANGE_PER:.2f}%)'
+            )
+
+
+    col1, col2, col3 = st.columns(3, gap="medium")
+
+    col1.metric(
+        "High",
+        value=f'{HIGH:.1f} {CURRENCY}'
+        )
+
+    col2.metric(
+        "Low",
+        value=f'{LOW:.1f} {CURRENCY}'
+    )
+
+    col3.metric(
+        "Volume",
+        value=f'{VOLUME}'
+    )
+
+    #----CANDLESTICK CHART----
+    hist = data_handler.fetch_historical_data(TICKER, period=PERIOD, interval=INTERVAL)
+
+    if isinstance(hist, Exception):
+        st.error(hist)
+        data_handler.fetch_historical_data.clear(TICKER, period=PERIOD, interval=INTERVAL)
+        st.stop()
+
+    df = hist.copy()
+
+    # Price Performance
+
+    col1, col2, col3 = st.columns(3, gap="medium")
+
+    LEN = len(df)
+    Pct_change_1P = (df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0]
+
+    col1.metric(
+        "1 Period",
+        value=f'{Pct_change_1P*100:.2f}%'
+    )
+
+    Pct_change_12P = (df['Close'].iloc[-1] - df['Close'].iloc[int(LEN/2)]) / df['Close'].iloc[int(LEN/2)]
+
+    col2.metric(
+        "1/2 Period",
+        value=f'{Pct_change_12P*100:.2f}%'
+    )
+
+    Pct_change_14P = (df['Close'].iloc[-1] - df['Close'].iloc[int(LEN/4)]) / df['Close'].iloc[int(LEN/4)]
+
+    col3.metric(
+        "1/4 Period",
+        value=f'{Pct_change_14P*100:.2f}%'
+    )
+
+    if not TOGGLE_VOL:
+        df = df.drop(columns=['Volume'], axis=1)
+    else:
+        df['ΔVolume%'] = df['Volume'].pct_change(periods=1) * 100
+        df['ΔVolume%'] = df['ΔVolume%'].apply(lambda x: f"{x:.1f}%" if pd.notna(x) else None)
+
+    for INDICATOR in INDICATORS:
+        if "SMA" in INDICATOR:
+            window = int(INDICATOR.split("_")[1])
+            df[INDICATOR] = df['Close'].rolling(window=window, min_periods=1).mean()
+        if "EMA" in INDICATOR:
+            window = int(INDICATOR.split("_")[1])
+            df[INDICATOR] = df['Close'].ewm(span=window, adjust=False, min_periods=1).mean()
+
+    if "ATR" in INDICATORS:
+
+        Prev_Close = df['Close'].shift(1)
+        High_Low = df['High'] - df['Low']
+        High_PrevClose = abs(df['High'] - Prev_Close)
+        Low_PrevClose = abs(df['Low'] - Prev_Close)
+
+        df['TR'] = pd.concat([High_Low, High_PrevClose, Low_PrevClose], axis=1).max(axis=1)
+
+        df['ATR'] = df['TR'].rolling(window=14, min_periods=1).mean()
+
+        df = df.drop(columns=['TR'], axis=1)
+
+    if "MACD" in INDICATORS:
+
+        ema_short = df['Close'].ewm(span=12, adjust=False, min_periods=1).mean()
+        ema_long = df['Close'].ewm(span=26, adjust=False, min_periods=1).mean()
+        df['MACD'] = ema_short - ema_long
+        df['Signal'] = df['MACD'].ewm(span=9, adjust=False, min_periods=1).mean()
+        df['MACD_Hist'] = df['MACD'] - df['Signal']
+
+    if "RSI" in INDICATORS:
+
+        # delta = df['Close'].diff()
+        delta = df['Close'].pct_change(periods=1) * 100
+
+        # Separate gains and losses
+        gain = (delta.where(delta > 0, 0)).rolling(window=14, min_periods=1).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14, min_periods=1).mean()
+
+        # Calculate the relative strength (RS)
+        rs = gain / loss
+
+        df['RSI'] = 100 - (100 / (1 + rs))
+
+    fig = visualizer.plot_candles_stick_bar(df, title="Candlestick Chart", currency=CURRENCY)
+
+    fig.add_hline(y=FIFTY_TWO_WEEK_LOW, line=dict(color="black", dash="dash", width=1), annotation_text='52 Week Low', row=1, col=1)
+    fig.add_hline(y=FIFTY_TWO_WEEK_HIGH, line=dict(color="black", dash="dash", width=1), annotation_text='52 Week High', row=1, col=1)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("Show data"):
+        st.dataframe(
+            data=df.reset_index(),
+            hide_index=False
+        )
+
+else:
+
+    TITLE = ", ".join(TICKERS)
+
+    st.header(f"Securities: {TITLE}")
+
+    dfs_hist = list()
+    dfs_info = list()
+
+    for TICKER in TICKERS:
+        info = data_handler.fetch_info(TICKER)
+
+        df = data_handler.parse_data(info)
+        df = df.rename(columns={0: TICKER})
+        dfs_info.append(df)
+
+        hist = data_handler.fetch_historical_data(TICKER, period=PERIOD, interval=INTERVAL)
+
+        if isinstance(hist, Exception):
+            st.error(hist)
+            data_handler.fetch_historical_data.clear(TICKER, period=PERIOD, interval=INTERVAL)
+
+        else:
+            hist.insert(0, 'Ticker', TICKER)
+
+            hist['Pct_change'] = ((hist['Close'] - hist['Close'].iloc[0]) / hist['Close'].iloc[0])
+
+            dfs_hist.append(hist)
+
+        if len(dfs_hist) == 0:
+            st.error("Error found")
+            st.stop()
+
+    df = pd.concat(dfs_info, axis=1, join='inner')
+    df = df.reset_index()
+    df = df.rename(columns={"index": "Feature"})
+
+    # ----INFORMATION----
+    with st.expander("More info"):
+
+        st.dataframe(
+            data=df,
+            hide_index=True
+        )
+
+    # ----PERFORMANCES----
+
+    df = pd.concat(dfs_hist, ignore_index=False)
+
+    fig = visualizer.performance_table(df, TICKERS)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ----LINE CHART----
+
+    fig = visualizer.plot_line_multiple(df, "Percent Change Line Chart")
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("Show data"):
+        st.dataframe(
+            data=df.reset_index(),
+            hide_index=False
+        )
 

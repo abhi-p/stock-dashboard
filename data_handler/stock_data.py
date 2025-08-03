@@ -50,7 +50,6 @@ class StockDataHandler:
             return e
 
 
-
     def get_price_info(self, ticker):
     # Replace with real API or source
     # Example with Yahoo Finance (if using yfinance)
@@ -68,6 +67,116 @@ class StockDataHandler:
                 "current_price": 0.0,
                 "previous_close": 0.0
         }
+    def parse_data(_self,info):
+        data = {}
+
+        TYPE = info['quoteType']
+
+        if TYPE == "EQUITY":
+
+            data['Quote Type'] = TYPE
+            data['Name'] = info.get('shortName', "")
+            data['Country'] = info.get('country', "")
+            data['Market Exchange'] = info.get('exchange', "")
+            data['Sector'] = info.get('sector', "")
+            data['Industry'] = info.get('industry', "")
+            data['Market Capitalization'] = str(info.get('marketCap', ""))
+            data['Quote currency'] = info.get('currency', "?")
+            data['Beta'] = str(info.get('beta', "?"))
+            data['Price'] = info.get('currentPrice', 0)
+
+        elif TYPE == "ETF":
+
+            data['Quote Type'] = TYPE
+            data['Market Exchange'] = info.get('exchange', "")
+            data['Fund Family'] = info.get('fundFamily', "")
+            data['Category'] = info.get('category', "")
+            data['Total Assets'] = info.get('totalAssets', "")
+            data['Quote currency'] = info.get('currency', "?")
+            data['Beta'] = str(info.get('beta3Year', "?"))
+            data['Price'] = info.get('navPrice', 0)
+
+        elif TYPE == "INDEX":
+
+            data['Quote Type'] = TYPE
+            data['Market'] = info.get('market', "")
+            data['Price'] = info.get('previousClose', 0)
+
+        elif TYPE == "FUTURE":
+            pass
+
+        elif TYPE == "MUTUALFUND":
+            pass
+
+        elif TYPE == "CURRENCY":
+            pass
+
+        df = pd.DataFrame([data]).T
+
+        return df
+
+
+    @st.cache_data
+    def fetch_historical_data(_self,ticker, period="3mo", interval="1d", start=None):
+        ticker = yf.Ticker(ticker)
+        try:
+            if start:
+                hist = ticker.history(
+                    start=start,
+                    interval=interval
+                )
+            else:
+                hist = ticker.history(
+                    period=period,
+                    interval=interval
+                )
+
+            return hist
+
+        except Exception as e:
+            return e
+
+
+
+    @st.cache_data
+    def fetch_balance(_self,ticker, tp="Annual"):
+        ticker = yf.Ticker(ticker)
+        try:
+            if tp == "Annual":
+                bs = ticker.balance_sheet
+            else:
+                bs = ticker.quarterly_balance_sheet
+            return bs.loc[:, bs.isna().mean() < 0.5]
+
+        except Exception as e:
+            return e
+
+    @st.cache_data
+    def fetch_income(_self,ticker, tp="Annual"):
+        ticker = yf.Ticker(ticker)
+        try:
+            if tp == "Annual":
+                ins = ticker.income_stmt
+            else:
+                ins = ticker.quarterly_income_stmt
+            return ins.loc[:, ins.isna().mean() < 0.5]
+
+        except Exception as e:
+            return e
+
+    @st.cache_data
+    def fetch_cash(_self,ticker, tp="Annual"):
+        ticker = yf.Ticker(ticker)
+        try:
+            if tp == "Annual":
+                cf = ticker.cashflow
+            else:
+                cf = ticker.quarterly_cashflow
+            return cf.loc[:, cf.isna().mean() < 0.5]
+
+        except Exception as e:
+            return e
+
 
     def get_news(self,symbol, limit=100):
         API_KEY = "lYJmcjOeGqc8BE3hw3wxTQGgJ7d2i0Zn"
