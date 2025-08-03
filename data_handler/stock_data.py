@@ -3,16 +3,71 @@ import pandas as pd
 import streamlit as st
 import datetime
 from datetime import timedelta, datetime 
+import yfinance as yf
 
-# API_KEY = st.secrets["api"]["iex_key"]
-API_KEY_ALPHA = st.secrets["alpha_vantage_api"]
-API_KEY_POLYGON = st.secrets["polygon_api"]
+
+
+import random
+#from fp.fp import FreeProxy
+
+# import plotly.graph_objects as go
+# from plotly.subplots import make_subplots
+# import plotly.colors as pc
+
+
+# # API_KEY = st.secrets["api"]["iex_key"]
+# API_KEY_ALPHA = st.secrets["alpha_vantage_api"]
+# API_KEY_POLYGON = st.secrets["polygon_api"]
 
 
 class StockDataHandler:
     def __init__(self):
-        self.api_key_alpha = API_KEY_ALPHA
-        self.api_key_polygon = API_KEY_POLYGON
+        # self.api_key_alpha = API_KEY_ALPHA
+        # self.api_key_polygon = API_KEY_POLYGON
+        self.var=None
+
+
+    @st.cache_data
+    def fetch_info(_self,ticker):
+        ticker = yf.Ticker(ticker)
+
+        try:
+            info = ticker.info
+            return info
+        except Exception as e:
+            return e
+        
+
+
+    @st.cache_data
+    def fetch_df(_self,url):
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        try:
+            response = requests.get(url, headers=headers, timeout=5)
+            df = pd.read_html(response.content)
+            return df[0]
+        except Exception as e:
+            return e
+
+
+
+    def get_price_info(self, ticker):
+    # Replace with real API or source
+    # Example with Yahoo Finance (if using yfinance)
+        try:
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period="2d")
+            current_price = hist["Close"].iloc[-1]
+            previous_close = hist["Close"].iloc[-2]
+            return {
+                "current_price": current_price,
+                "previous_close": previous_close
+            }
+        except Exception as e:
+            return {
+                "current_price": 0.0,
+                "previous_close": 0.0
+        }
 
     def get_news(self,symbol, limit=100):
         API_KEY = "lYJmcjOeGqc8BE3hw3wxTQGgJ7d2i0Zn"
