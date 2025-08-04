@@ -8,5 +8,5 @@ plotly
 DateTime 
 polygon
 requests
-yfinace
+yfinance
 zoneinfo
