@@ -9,4 +9,3 @@ DateTime
 polygon
 requests
 yfinance
-zoneinfo
