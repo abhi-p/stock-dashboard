@@ -29,6 +29,27 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+
+# st.markdown("""
+#     <style>
+#     .stock-card {
+#         background-color: #f9f9f9;
+#         padding: 1rem;
+#         border-radius: 12px;
+#         margin-bottom: 1rem;
+#         box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+#     }
+#     .gain {
+#         color: green;
+#         font-weight: bold;
+#     }
+#     .loss {
+#         color: red;
+#         font-weight: bold;
+#     }
+#     </style>
+# """, unsafe_allow_html=True)
+
 # Initialize portfolio
 if "portfolio" not in st.session_state:
     st.session_state.portfolio = []
@@ -64,10 +85,43 @@ with st.expander("➕ Add Stock to Portfolio"):
 
 
 # Display portfolio
+sort_options = {
+    "Ticker": lambda x: x["Ticker"],
+    "Total Value": lambda x: data_handler.get_price_info(x["Ticker"]).get("current_price", 0.0) * x["Shares"],
+    "Today's Change": lambda x: (
+        data_handler.get_price_info(x["Ticker"]).get("current_price", 0.0)
+        - data_handler.get_price_info(x["Ticker"]).get("previous_close", 0.0)
+    ),
+    "All-Time Return": lambda x: (
+        data_handler.get_price_info(x["Ticker"]).get("current_price", 0.0)
+        - x["Buy Price"]
+    )
+}
+
+sort_by = st.selectbox("🔽 Sort portfolio by:", list(sort_options.keys()))
+ascending = st.checkbox("⬆️ Ascending", value=False)
+
+# Sort portfolio based on selected criteria
+st.session_state.portfolio = sorted(
+    st.session_state.portfolio,
+    key=sort_options[sort_by],
+    reverse=not ascending
+)
+
 if st.session_state.portfolio:
     total_value = 0.0
     st.markdown("### 📈 Current Holdings")
 
+    st.markdown("""
+    <div class="stock-card" style="background: transparent; box-shadow: none; font-weight: bold;">
+        <div style="display: flex; justify-content: space-between; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">
+            <div style="width: 25%;">Ticker</div>
+            <div style="width: 25%;">Total Value</div>
+            <div style="width: 25%;">Today's Change</div>
+            <div style="width: 25%;">All-Time Return</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     for i, stock in enumerate(st.session_state.portfolio):
         info = data_handler.get_price_info(stock["Ticker"])
         current_price = info.get("current_price", 0.0)
@@ -75,44 +129,41 @@ if st.session_state.portfolio:
 
         shares = stock["Shares"]
         buy_price = stock["Buy Price"]
-        total_stock_value = current_price * shares
-        change_from_buy = current_price - buy_price
+        ticker = stock["Ticker"]
+
+        total_value = current_price * shares
+        total_cost = buy_price * shares
+
         change_today = current_price - prev_close
+        change_today_pct = (change_today / prev_close) * 100 if prev_close else 0
 
-        gain_loss_class = "gain" if change_from_buy >= 0 else "loss"
-        change_today_class = "gain" if change_today >= 0 else "loss"
+        all_time_return = current_price - buy_price
+        all_time_return_pct = (all_time_return / buy_price) * 100 if buy_price else 0
 
-        total_value += total_stock_value
+        return_color_class = "gain" if all_time_return_pct >= 0 else "loss"
+        today_color_class = "gain" if change_today_pct >= 0 else "loss"
 
-        # Create a styled "card"
         with st.container():
             st.markdown(f"""
-                <div class="stock-card">
-                    <div class="ticker-title">{stock['Ticker']}</div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
-                        <div><strong>Shares:</strong> {shares}</div>
-                        <div><strong>Average Price: </strong> ${buy_price:.2f}</div>
-                        <div><strong>Current:</strong> ${current_price:.2f}</div>
-                        <div><strong>Total:</strong> ${total_stock_value:.2f}</div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
-                        <div><strong>Change from Buy:</strong> <span class="{gain_loss_class}">${change_from_buy:.2f}</span></div>
-                        <div><strong>Today's Change:</strong> <span class="{change_today_class}">${change_today:.2f}</span></div>
-                        <form style="margin: 0;" action="" method="post">
-                            <button type="submit" name="delete_{i}" style="color: red; background: none; border: none; font-weight: bold;">🗑 Delete</button>
-                        </form>
-                    </div>
+            <div class="stock-card">
+                <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px;">
+                    <div>{ticker}</div>
+                    <div>${total_value:,.2f}</div>
+                    <div class="{today_color_class}">${change_today:.2f} ({change_today_pct:.2f}%)</div>
+                    <div class="{return_color_class}">${all_time_return:.2f} ({all_time_return_pct:.2f}%)</div>
                 </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; color: #555;">
+                    <div>{shares} shares</div>
+                    <div></div>
+                    <div class="{today_color_class}">{change_today_pct:.2f}% today</div>
+                    <div class="{return_color_class}">{all_time_return_pct:.2f}% all-time</div>
+                </div>
+            </div>
             """, unsafe_allow_html=True)
 
-            # Delete logic
-        # Native Streamlit delete button
-            if st.button("🗑 Delete", key=f"delete_{i}"):
-                print(st.session_state.portfolio)
+            if st.button("🗑 Remove", key=f"delete_{i}"):
                 del st.session_state.portfolio[i]
                 st.rerun()
-
-            st.markdown("</div></div>", unsafe_allow_html=True)
 
     st.markdown(f"### 💵 **Total Portfolio Value**: ${total_value:,.2f}")
 else:
