@@ -10,3 +10,4 @@ polygon
 requests
 yfinance
 streamlit-javascript
+lxml
