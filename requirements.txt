@@ -9,3 +9,4 @@ DateTime
 polygon
 requests
 yfinance
+streamlit-javascript
