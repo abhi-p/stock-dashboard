@@ -41,7 +41,11 @@ class StockDataHandler:
 
     @st.cache_data
     def fetch_df(_self,url):
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        headers = {
+                           "User-Agent": "Mozilla/5.0",
+        "Accept-Language": "en-US,en;q=0.9"
+                   
+                   }
         try:
             response = requests.get(url, headers=headers, timeout=5)
             df = pd.read_html(response.content)
