@@ -181,6 +181,7 @@ with col1:
                 for col in cols:
                     with col:
                         row = df[df['Symbol'] == INDICES[i]].iloc[0]
+                        print(row.columns)
                         name = row['Name']
                         symbol = row['Symbol']
                         price, change, change_pt = row['Price'].split()
