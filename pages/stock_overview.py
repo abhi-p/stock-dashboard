@@ -48,6 +48,21 @@ for key in page_state:
 with st.sidebar:
 
 
+    TOGGLE_THEME = st.toggle(
+        label="Dark mode :material/dark_mode:",
+        key="toggle_theme",
+        help="Switch to dark theme"
+        #value=False
+    )
+
+    if TOGGLE_THEME != st.session_state['dark_mode']:
+        if TOGGLE_THEME:
+            st._config.set_option(f'theme.base', "dark")
+        else:
+            st._config.set_option(f'theme.base', "light")
+        st.session_state['dark_mode'] = TOGGLE_THEME
+        st.rerun()
+
 
     TICKERS = st.text_input(
         label="Securities:",
